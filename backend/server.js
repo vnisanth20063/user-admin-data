@@ -9,60 +9,92 @@ const Registration = require("./models/Registration");
 
 const app = express();
 
+// Required when running behind Render's proxy
+app.set("trust proxy", 1);
+
+// Frontend URLs allowed to access the backend
+const allowedOrigins = [
+    "http://localhost:5173",
+    process.env.FRONTEND_URL,
+].filter(Boolean);
+
 app.use(
     cors({
-        origin: "http://localhost:5173",
+        origin: function (origin, callback) {
+            // Allow requests without an Origin header, such as server-side requests
+            if (!origin || allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+
+            return callback(new Error("Not allowed by CORS"));
+        },
         credentials: true,
     })
 );
 
 app.use(express.json());
 
-// Store admin sessions in MongoDB
+// Session configuration
+const isProduction = process.env.NODE_ENV === "production";
+
 app.use(
     session({
         name: "admin.sid",
         secret: process.env.SESSION_SECRET,
         resave: false,
         saveUninitialized: false,
+
         store: MongoStore.create({
             mongoUrl: process.env.MONGO_URI,
             collectionName: "sessions",
         }),
+
         cookie: {
             httpOnly: true,
-            secure: false, // For local HTTP development only
-            sameSite: "lax",
-            maxAge: 1000 * 60 * 60 * 2, // 2 hours
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
+            maxAge: 1000 * 60 * 60 * 2,
         },
     })
 );
 
-// Check required configuration
-if (!process.env.ADMIN_PASSWORD || !process.env.SESSION_SECRET) {
-    throw new Error("ADMIN_PASSWORD and SESSION_SECRET must be set in .env");
+// Check required environment variables
+if (
+    !process.env.MONGO_URI ||
+    !process.env.ADMIN_PASSWORD ||
+    !process.env.SESSION_SECRET
+) {
+    throw new Error(
+        "Missing MONGO_URI, ADMIN_PASSWORD, or SESSION_SECRET in environment variables."
+    );
 }
 
+// Reuse cookie settings when clearing the session cookie
+const cookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+};
+
+// Backend health check
 app.get("/", (req, res) => {
-    res.json({ message: "Cinematic Registration API is running!" });
+    res.json({
+        message: "Cinematic Registration API is running!",
+    });
 });
 
-// Public: students can submit registrations
+// Register a new user
 app.post("/api/register", async (req, res) => {
     try {
-        const { name, email, department } = req.body;
-
-        const registration = await Registration.create({
-            name,
-            email,
-            department,
-        });
+        const registration = await Registration.create(req.body);
 
         res.status(201).json({
-            message: "Registration successful!",
-            data: registration,
+            message: "Registration successful",
+            registration,
         });
     } catch (error) {
+        console.error("Registration error:", error.message);
+
         res.status(400).json({
             message: "Registration failed",
             error: error.message,
@@ -74,16 +106,12 @@ app.post("/api/register", async (req, res) => {
 app.post("/api/admin/login", (req, res, next) => {
     const { password } = req.body;
 
-    if (
-        typeof password !== "string" ||
-        password !== process.env.ADMIN_PASSWORD
-    ) {
+    if (password !== process.env.ADMIN_PASSWORD) {
         return res.status(401).json({
-            message: "Invalid password",
+            message: "Invalid admin password",
         });
     }
 
-    // Regenerate the session after successful login
     req.session.regenerate((error) => {
         if (error) {
             return next(error);
@@ -91,28 +119,31 @@ app.post("/api/admin/login", (req, res, next) => {
 
         req.session.isAdmin = true;
 
-        req.session.save((error) => {
-            if (error) {
-                return next(error);
+        req.session.save((saveError) => {
+            if (saveError) {
+                return next(saveError);
             }
 
-            res.json({ message: "Login successful" });
+            res.json({
+                message: "Admin login successful",
+                authenticated: true,
+            });
         });
     });
 });
 
-// Protect admin-only endpoints
+// Middleware to protect admin routes
 function requireAdmin(req, res, next) {
     if (req.session && req.session.isAdmin === true) {
         return next();
     }
 
     return res.status(401).json({
-        message: "Please log in as admin",
+        message: "Unauthorized. Please log in as admin.",
     });
 }
 
-// Check whether the current user is logged in
+// Check whether the admin session is active
 app.get("/api/admin/session", (req, res) => {
     res.json({
         authenticated: req.session?.isAdmin === true,
@@ -126,35 +157,49 @@ app.post("/api/admin/logout", requireAdmin, (req, res, next) => {
             return next(error);
         }
 
-        res.clearCookie("admin.sid", {
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax",
-        });
+        res.clearCookie("admin.sid", cookieOptions);
 
-        res.json({ message: "Logged out successfully" });
+        res.json({
+            message: "Logged out successfully",
+        });
     });
 });
 
-// Protected: only logged-in admins can fetch registrations
+// Get all registrations (admin only)
 app.get("/api/register", requireAdmin, async (req, res) => {
     try {
         const registrations = await Registration.find().sort({
             createdAt: -1,
         });
 
-        res.status(200).json(registrations);
+        res.json(registrations);
     } catch (error) {
+        console.error("Fetching registrations error:", error.message);
+
         res.status(500).json({
             message: "Failed to fetch registrations",
-            error: error.message,
         });
     }
 });
 
+// Handle unexpected errors
+app.use((error, req, res, next) => {
+    console.error("Server error:", error.message);
+
+    if (res.headersSent) {
+        return next(error);
+    }
+
+    res.status(500).json({
+        message: "Internal server error",
+    });
+});
+
+// Connect to MongoDB and start the server
 async function startServer() {
     try {
         await mongoose.connect(process.env.MONGO_URI);
+
         console.log("MongoDB connected successfully");
 
         const PORT = process.env.PORT || 5000;
@@ -163,7 +208,8 @@ async function startServer() {
             console.log(`Server running on port ${PORT}`);
         });
     } catch (error) {
-        console.error("MongoDB connection failed:", error.message);
+        console.error("Server startup failed:", error.message);
+        process.exit(1);
     }
 }
 
