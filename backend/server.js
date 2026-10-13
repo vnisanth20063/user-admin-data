@@ -14,7 +14,7 @@ app.set("trust proxy", 1);
 
 // Frontend URLs allowed to access the backend
 const allowedOrigins = [
-    "http://localhost:5173",
+    "https://user-admin-data-2.onrender.com",
     process.env.FRONTEND_URL,
 ].filter(Boolean);
 
