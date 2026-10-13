@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AdminLogin.css";
 
+const API_URL = "https://user-admin-data-1.onrender.com";
+
 function AdminLogin() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -17,7 +19,7 @@ function AdminLogin() {
 
         try {
             const response = await fetch(
-                "https://user-admin-data-1.onrender.com",
+                `${API_URL}/api/admin/login`,
                 {
                     method: "POST",
                     headers: {
@@ -36,7 +38,9 @@ function AdminLogin() {
 
             navigate("/admin/dashboard");
         } catch (error) {
-            setError(error.message || "Unable to connect to the server");
+            setError(
+                error.message || "Unable to connect to the server"
+            );
         } finally {
             setLoading(false);
         }
@@ -49,6 +53,7 @@ function AdminLogin() {
                 <p>Sign in to manage student registrations.</p>
 
                 <label htmlFor="admin-password">Password</label>
+
                 <input
                     id="admin-password"
                     type="password"
