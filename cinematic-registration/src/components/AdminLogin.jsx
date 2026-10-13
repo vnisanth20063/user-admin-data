@@ -17,7 +17,7 @@ function AdminLogin() {
 
         try {
             const response = await fetch(
-                "http://localhost:5000/api/admin/login",
+                "https://user-admin-data-1.onrender.com",
                 {
                     method: "POST",
                     headers: {
