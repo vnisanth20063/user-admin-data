@@ -7,7 +7,7 @@ function RegistrationsList() {
         const fetchStudents = async () => {
             try {
                 const response = await fetch(
-                    "http://localhost:5000/api/register"
+                    "https://user-admin-data-1.onrender.com"
                 );
 
                 if (!response.ok) {
