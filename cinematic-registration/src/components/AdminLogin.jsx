@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AdminLogin.css";
 
-const API_URL = "https://user-admin-data-1.onrender.com";
+const API_URL = "https://user-admin-data-1.onrender.com/api/admin/login";
 
 function AdminLogin() {
     const [password, setPassword] = useState("");
