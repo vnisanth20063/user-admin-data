@@ -20,12 +20,31 @@ function RegistrationsList() {
                     }
                 );
 
+                const contentType =
+                    response.headers.get("content-type") || "";
+
+                if (!contentType.includes("application/json")) {
+                    const text = await response.text();
+
+                    console.error("Request URL:", response.url);
+                    console.error("Status:", response.status);
+                    console.error("Response:", text.slice(0, 300));
+
+                    throw new Error(
+                        "The server returned HTML instead of JSON. Check the backend URL and Render logs."
+                    );
+                }
+
                 const data = await response.json();
 
                 if (!response.ok) {
                     throw new Error(
                         data.message || "Failed to fetch registrations"
                     );
+                }
+
+                if (!Array.isArray(data)) {
+                    throw new Error("Unexpected registrations response.");
                 }
 
                 if (isMounted) {

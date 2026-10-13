@@ -1,6 +1,7 @@
-
 import { useEffect, useState } from "react";
 import "./Registration.css";
+
+const API_URL = "https://user-admin-data-1.onrender.com";
 
 const DEPARTMENTS = [
     ["CSE", "Computer Science (CSE)"],
@@ -72,16 +73,13 @@ export default function Registration() {
         setSuccess(false);
 
         try {
-            const response = await fetch(
-                "http://localhost:5000/api/register",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify(formData),
-                }
-            );
+            const response = await fetch(`${API_URL}/api/register`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(formData),
+            });
 
             const data = await response.json().catch(() => ({}));
 
@@ -159,8 +157,7 @@ export default function Registration() {
                             "--x": `${(i * 41 + 13) % 100}%`,
                             "--delay": `${-(i % 8)}s`,
                             "--duration": `${9 + (i % 5)}s`,
-                            "--drift": `${(i % 2 ? 1 : -1) * (12 + (i % 4) * 7)
-                                }px`,
+                            "--drift": `${(i % 2 ? 1 : -1) * (12 + (i % 4) * 7)}px`,
                         }}
                     />
                 ))}
@@ -348,7 +345,9 @@ export default function Registration() {
 
                         {message && (
                             <div
-                                className={`form-message ${success ? "message-success" : "message-error"
+                                className={`form-message ${success
+                                        ? "message-success"
+                                        : "message-error"
                                     }`}
                                 role={success ? "status" : "alert"}
                                 aria-live="polite"
