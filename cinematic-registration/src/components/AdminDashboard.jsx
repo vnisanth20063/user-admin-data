@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://user-admin-data-1.onrender.com";
 
 function AdminDashboard() {
     const [registrations, setRegistrations] = useState([]);
