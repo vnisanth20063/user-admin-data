@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AdminLogin.css";
 
-const API_URL = "https://user-admin-data-1.onrender.com/api/admin/login";
+const API_URL = "https://user-admin-data-1.onrender.com";
 
 function AdminLogin() {
     const [password, setPassword] = useState("");
@@ -33,7 +33,9 @@ function AdminLogin() {
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.message || "Login failed");
+                throw new Error(
+                    result.message || "Login failed"
+                );
             }
 
             navigate("/admin/dashboard");
@@ -48,22 +50,33 @@ function AdminLogin() {
 
     return (
         <main className="admin-login-page">
-            <form className="admin-login-card" onSubmit={handleLogin}>
+            <form
+                className="admin-login-card"
+                onSubmit={handleLogin}
+            >
                 <h1>Admin Login</h1>
                 <p>Sign in to manage student registrations.</p>
 
-                <label htmlFor="admin-password">Password</label>
+                <label htmlFor="admin-password">
+                    Password
+                </label>
 
                 <input
                     id="admin-password"
                     type="password"
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={(event) =>
+                        setPassword(event.target.value)
+                    }
                     placeholder="Enter admin password"
                     required
                 />
 
-                {error && <p className="login-error">{error}</p>}
+                {error && (
+                    <p className="login-error">
+                        {error}
+                    </p>
+                )}
 
                 <button type="submit" disabled={loading}>
                     {loading ? "Signing in..." : "Sign In"}
